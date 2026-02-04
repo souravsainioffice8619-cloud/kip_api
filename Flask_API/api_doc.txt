@@ -1,0 +1,228 @@
+# API Documentation
+
+This document provides a summary of all the API endpoints available in the Flask project.
+
+## Authentication API (`/`)
+
+### `POST /login`
+- **Description**: Authenticates a user and returns a JWT token. It can also be used to verify an existing token.
+- **Request Body (Login)**: 
+  ```json
+  {
+    "username": "your_username",
+    "password": "your_password"
+  }
+  ```
+- **Request Body (Verify Token)**:
+  ```json
+  {
+    "token": "your_jwt_token"
+  }
+  ```
+- **Response**: A JWT access token and its expiration time.
+
+### `POST /logout`
+- **Description**: Clears the access token cookie to log the user out.
+- **Response**: A confirmation message.
+
+---
+
+## KPI API (`/kpi`)
+
+### `GET /kpi/cost/damage` <--- don't use This
+- **Description**: Retrieves the cost per damage.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
+### `GET /kpi/cost/vin`
+- **Description**: Retrieves the cost per VIN.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
+### `GET /kpi/cost/visit`
+- **Description**: Retrieves the cost per visit.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
+### `GET /kpi/damages/visit`
+- **Description**: Retrieves the damages per visit.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
+### `GET /kpi/hours/visit`
+- **Description**: Retrieves the hours per visit.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
+### `GET /kpi/hours/damage`
+- **Description**: Retrieves the hours per damage.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
+### `GET /kpi/labor_cost/damage`
+- **Description**: Retrieves the labor cost per damage.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
+### `GET /kpi/parts_cost/damage`
+- **Description**: Retrieves the parts cost per damage.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
+---
+
+## Database API (`/db`)
+
+### `GET /db/tables`
+- **Description**: Returns a list of table names in the public schema of the database.
+- **Response**: A JSON object containing a list of table names.
+
+### `GET /db/query`
+- **Description**: Executes a safe, read-only SQL query.
+- **Query Parameters**: `city` (string), `limit` (integer, optional).
+- **Response**: A JSON object containing the query results.
+
+### `POST /db/query`
+- **Description**: Executes a safe, read-only SQL query.
+- **Request Body**:
+  ```json
+  {
+    "sql": "SELECT * FROM your_table WHERE condition = %s",
+    "params": ["value"]
+  }
+  ```
+- **Response**: A JSON object containing the query results.
+
+### `GET /db/city`
+- **Description**: Queries data for a specific city.
+- **Query Parameters**: `city` (string, required), `table` (string, required), `limit` (integer, optional).
+- **Response**: A JSON object containing the query results.
+
+---
+
+## Device API (`/`)
+
+### `GET /device`
+- **Description**: Returns device information from the incoming request. This endpoint requires JWT authentication.
+- **Response**: A JSON object with device information.
+
+---
+
+## Info API (`/`)
+
+### `GET /routes.html`
+- **Description**: Displays a simple HTML page with a list of all registered routes in the application.
+- **Response**: An HTML page.
+
+---
+
+## Log API (`/log`)
+
+### `GET /log/init`
+- **Description**: Creates the `logs` table in the database if it doesn't already exist.
+- **Response**: A confirmation message.
+
+### `POST /log`
+- **Description**: Adds a new log entry to the database.
+- **Request Body**:
+  ```json
+  {
+    "level": "INFO",
+    "message": "This is a log message."
+  }
+  ```
+- **Response**: A confirmation message.
+
+---
+
+## Main API (`/`)
+
+### `GET /`
+- **Description**: Returns a sample image.
+- **Response**: An image file.
+
+### `GET /image`
+- **Description**: Returns a simple HTML message. This endpoint requires JWT authentication.
+- **Response**: An HTML string.
+
+
+--KPIs MONTHLY DEALER WISE
+--cost_per_vin // Done
+SELECT 
+    dealer_code, 
+    dealer_address,
+    DATE_TRUNC('month', TO_DATE(repair_date, 'DD-MM-YYYY')) AS month,
+    model_series,
+    service_type,
+    SUM(CAST(REPLACE(total_cost, ',', '') AS DECIMAL)) AS total_cost_sum,
+    ROUND(SUM(CAST(REPLACE(total_cost, ',', '') AS DECIMAL)) / NULLIF(COUNT(DISTINCT fin), 0), 2) AS cost_per_vin
+FROM warranty_claims
+GROUP BY dealer_code, dealer_address, month, model_series, service_type
+ORDER BY dealer_code, month;
+
+--cost_per_visit // Done
+SELECT 
+    dealer_code, 
+    dealer_address,
+    DATE_TRUNC('month', TO_DATE(repair_date, 'DD-MM-YYYY')) AS month,
+    model_series,
+    service_type,
+    repair_date, -- Included to define the specific visit
+    SUM(CAST(REPLACE(total_cost, ',', '') AS DECIMAL)) AS total_cost_sum,
+    ROUND(SUM(CAST(REPLACE(total_cost, ',', '') AS DECIMAL)) / NULLIF(COUNT(DISTINCT fin || repair_date), 0), 2) AS cost_per_visit
+FROM warranty_claims
+GROUP BY dealer_code, dealer_address, month, model_series, service_type, repair_date
+ORDER BY dealer_code, month;
+
+--hrs_per_vin // Done
+SELECT 
+    dealer_code, 
+    dealer_address,
+    DATE_TRUNC('month', TO_DATE(repair_date, 'DD-MM-YYYY')) AS month,
+    model_series,
+    service_type,
+    SUM(CAST(REPLACE(total_cost, ',', '') AS DECIMAL)) AS total_cost_sum,
+    ROUND(SUM(CAST(REPLACE(op_time, ',', '') AS DECIMAL)) / NULLIF(COUNT(DISTINCT fin), 0), 2) AS hours_per_vin
+FROM warranty_claims
+GROUP BY dealer_code, dealer_address, month, model_series, service_type
+ORDER BY dealer_code, month;
+
+--hrs_per_visit
+SELECT 
+    dealer_code, 
+    dealer_address,
+    DATE_TRUNC('month', TO_DATE(repair_date, 'DD-MM-YYYY')) AS month,
+    model_series,
+    service_type,
+    repair_date,
+    SUM(CAST(REPLACE(total_cost, ',', '') AS DECIMAL)) AS total_cost_sum,
+    ROUND(SUM(CAST(REPLACE(op_time, ',', '') AS DECIMAL)) / NULLIF(COUNT(DISTINCT fin || repair_date), 0), 2) AS hours_per_visit
+FROM warranty_claims
+GROUP BY dealer_code, dealer_address, month, model_series, service_type, repair_date
+ORDER BY dealer_code, month;
+
+--damage_per_vin // Done
+SELECT 
+    dealer_code, 
+    dealer_address,
+    DATE_TRUNC('month', TO_DATE(repair_date, 'DD-MM-YYYY')) AS month,
+    model_series,
+    service_type,
+    SUM(CAST(REPLACE(total_cost, ',', '') AS DECIMAL)) AS total_cost_sum,
+    ROUND(CAST(COUNT(*) AS DECIMAL) / NULLIF(COUNT(DISTINCT fin), 0), 2) AS damages_per_vin
+FROM warranty_claims
+GROUP BY dealer_code, dealer_address, month, model_series, service_type
+ORDER BY dealer_code, month;
+
+--damage_cost_per_vin // Done
+SELECT 
+    dealer_code, 
+    dealer_address,
+    DATE_TRUNC('month', TO_DATE(repair_date, 'DD-MM-YYYY')) AS month,
+    model_series,
+    service_type,
+    SUM(CAST(REPLACE(total_cost, ',', '') AS DECIMAL)) AS total_cost_sum,
+    ROUND(SUM(CAST(REPLACE(total_cost, ',', '') AS DECIMAL)) / NULLIF(COUNT(DISTINCT fin), 0), 2) AS damage_cost_per_vin
+FROM warranty_claims
+GROUP BY dealer_code, dealer_address, month, model_series, service_type
+ORDER BY dealer_code, month;
