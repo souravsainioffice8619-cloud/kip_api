@@ -43,4 +43,34 @@ def city():
     result = query_execution(DB_TABLE,limit,sql)
     return result
 
+@cost_per_vin.route("/cost/vin/weekly", methods=["GET"])
+# @jwt_required
+def weekly():
+    """ Query weather data for a specific city with an optional limit.
+        http://localhost:5000/db_warranty_claims/cost/vin/weekly?limit=1000
+    """
+    print("DB_TABLE:", DB_TABLE)
+    print("DB_QUERY_LIMIT:", DB_QUERY_LIMIT)
+    limit = request.args.get("limit", type=int) or DB_QUERY_LIMIT 
+    sql = pgsql.SQL("""
+                        SELECT 
+                        DATE_TRUNC('week', TO_DATE(repair_date, 'DD-MM-YYYY'))::DATE AS week_start,
+                        DATE_TRUNC('week', TO_DATE(repair_date, 'DD-MM-YYYY'))::DATE + 6 AS week_end,
+                        dealer_code, 
+                        model_series,
+                        service_type,
+                        COUNT(DISTINCT fin) AS unique_vins,
+                        SUM(CAST(REPLACE(total_cost, ',', '') AS DECIMAL)) AS total_cost_sum,
+                        ROUND(SUM(CAST(REPLACE(total_cost, ',', '') AS DECIMAL)) / NULLIF(COUNT(DISTINCT fin), 0), 2) AS cost_per_vin
+                        FROM {}
+                        --WHERE dealer_code='81901'
+                        GROUP BY week_start, week_end, dealer_code, model_series, service_type
+                        ORDER BY week_start ASC, dealer_code
+                        LIMIT %s""").format(pgsql.Identifier(DB_TABLE))              
+    # sql = pgsql.SQL("""SELECT * 
+    #                    FROM {} 
+    #                    LIMIT %s""").format(pgsql.Identifier(DB_TABLE))
+    result = query_execution(DB_TABLE,limit,sql)
+    return result
+
     

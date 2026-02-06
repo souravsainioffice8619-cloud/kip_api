@@ -35,3 +35,8 @@ def verify_user(username: str, password: str) -> bool:
 
 def list_users():
     return list(load_users().keys())
+
+def get_user(username: str):
+    """Returns the stored password hash for a user, or None if not found."""
+    users = load_users()
+    return users.get(username)

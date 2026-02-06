@@ -21,7 +21,47 @@ def city():
     # city = request.args.get("city")
     limit = request.args.get("limit", type=int) or DB_QUERY_LIMIT   
     # sql = pgsql.SQL("SELECT * FROM {} WHERE city = %s LIMIT %s").format(pgsql.Identifier(table))
-    sql = pgsql.SQL("SELECT * FROM {} LIMIT %s").format(pgsql.Identifier(DB_TABLE))    # params = [city, limit]
+    sql = pgsql.SQL("""
+                        SELECT 
+                        dealer_code, 
+                        dealer_address,
+                        DATE_TRUNC('month', TO_DATE(repair_date, 'DD-MM-YYYY')) AS month,
+                        model_series,
+                        service_type,
+                        repair_date,
+                        SUM(CAST(REPLACE(total_cost, ',', '') AS DECIMAL)) AS total_cost_sum,
+                        ROUND(SUM(CAST(REPLACE(op_time, ',', '') AS DECIMAL)) / NULLIF(COUNT(DISTINCT fin || repair_date), 0), 2) AS hours_per_visit
+                        FROM {}
+                        GROUP BY dealer_code, dealer_address, month, model_series, service_type, repair_date
+                        ORDER BY dealer_code, month
+                        LIMIT %s
+                        """).format(pgsql.Identifier(DB_TABLE))    # params = [city, limit]
     return query_execution(DB_TABLE,limit,sql)
          
-
+@hrs_per_visit.route("/hours/visit/weekly", methods=["GET"])
+# @jwt_required
+def weekly():
+    """ Query weather data for a specific city with an optional limit.
+        http://localhost:5000/db_warranty_claims/cost/vist?limit=1000
+    """
+    print("DB_TABLE:", DB_TABLE)
+    print("DB_QUERY_LIMIT:", DB_QUERY_LIMIT)
+    # city = request.args.get("city")
+    limit = request.args.get("limit", type=int) or DB_QUERY_LIMIT   
+    # sql = pgsql.SQL("SELECT * FROM {} WHERE city = %s LIMIT %s").format(pgsql.Identifier(table))
+    sql = pgsql.SQL("""
+                        SELECT 
+                        DATE_TRUNC('week', TO_DATE(repair_date, 'DD-MM-YYYY'))::DATE AS week_start,
+                        DATE_TRUNC('week', TO_DATE(repair_date, 'DD-MM-YYYY'))::DATE + 6 AS week_end,
+                        dealer_code, 
+                        model_series,
+                        service_type,
+                        COUNT(DISTINCT fin) AS unique_vins,
+                        SUM(CAST(REPLACE(total_cost, ',', '') AS DECIMAL)) AS total_cost_sum,
+                        ROUND(SUM(CAST(REPLACE(op_time, ',', '') AS DECIMAL)) / NULLIF(COUNT(DISTINCT fin || repair_date), 0), 2) AS hours_per_visit
+                        FROM {}
+                        GROUP BY week_start, week_end, dealer_code, model_series, service_type
+                        ORDER BY week_start ASC, dealer_code
+                        LIMIT %s
+                        """).format(pgsql.Identifier(DB_TABLE))    # params = [city, limit]
+    return query_execution(DB_TABLE,limit,sql)

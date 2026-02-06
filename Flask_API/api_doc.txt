@@ -25,6 +25,17 @@ This document provides a summary of all the API endpoints available in the Flask
 - **Description**: Clears the access token cookie to log the user out.
 - **Response**: A confirmation message.
 
+### `POST /register`
+- **Description**: Registers a new user.
+- **Request Body**:
+  ```json
+  {
+    "username": "your_username",
+    "password": "your_password"
+  }
+  ```
+- **Response**: A confirmation message.
+
 ---
 
 ## KPI API (`/kpi`)
@@ -39,8 +50,38 @@ This document provides a summary of all the API endpoints available in the Flask
 - **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
 - **Response**: A JSON object containing the query results.
 
+### `GET /kpi/cost/vin/weekly`
+- **Description**: Retrieves the weekly cost per VIN.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
 ### `GET /kpi/cost/visit`
 - **Description**: Retrieves the cost per visit.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
+### `GET /kpi/cost/visit/weekly`
+- **Description**: Retrieves the weekly cost per visit.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
+### `GET /kpi/damages/vin`
+- **Description**: Retrieves the damages per VIN.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
+### `GET /kpi/damages/vin/weekly`
+- **Description**: Retrieves the weekly damages per VIN.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
+### `GET /kpi/damage_cost/vin`
+- **Description**: Retrieves the damage cost per VIN.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
+### `GET /kpi/damage_cost/vin/weekly`
+- **Description**: Retrieves the weekly damage cost per VIN.
 - **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
 - **Response**: A JSON object containing the query results.
 
@@ -51,6 +92,21 @@ This document provides a summary of all the API endpoints available in the Flask
 
 ### `GET /kpi/hours/visit`
 - **Description**: Retrieves the hours per visit.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
+### `GET /kpi/hours/visit/weekly`
+- **Description**: Retrieves the weekly hours per visit.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
+### `GET /kpi/hours/vin`
+- **Description**: Retrieves the hours per VIN.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
+### `GET /kpi/hours/vin/weekly`
+- **Description**: Retrieves the weekly hours per VIN.
 - **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
 - **Response**: A JSON object containing the query results.
 
@@ -68,6 +124,42 @@ This document provides a summary of all the API endpoints available in the Flask
 - **Description**: Retrieves the parts cost per damage.
 - **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
 - **Response**: A JSON object containing the query results.
+
+### `GET /kpi/most_frequent_repairs`
+- **Description**: Retrieves the most frequent repairs.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
+### `GET /kpi/least_frequent_repairs`
+- **Description**: Retrieves the least frequent repairs.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
+### `GET /kpi/most_costly_repairs`
+- **Description**: Retrieves the most costly repairs.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
+### `GET /kpi/best_performance`
+- **Description**: Retrieves the dealers with the best performance based on cost per VIN.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
+### `GET /kpi/highest_warranty_issues_by_models`
+- **Description**: Retrieves the models with the highest number of warranty claims.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
+### `GET /kpi/lowest_warranty_issues_by_models`
+- **Description**: Retrieves the models with the lowest number of warranty claims.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
+### `GET /kpi/worst_performance`
+- **Description**: Retrieves the dealers with the worst performance based on cost per VIN.
+- **Query Parameters**: `limit` (integer, optional) - The maximum number of records to return.
+- **Response**: A JSON object containing the query results.
+
 
 ---
 

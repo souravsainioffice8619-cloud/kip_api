@@ -1,7 +1,7 @@
 from functools import wraps
 from flask import request, jsonify
 import jwt
-import datetime
+from datetime import datetime , timezone ,timedelta
 import os
 from dotenv import load_dotenv
 
@@ -19,8 +19,8 @@ def create_token(username: str) -> str:
     """Create a signed JWT for the given username."""
     payload = {
         'sub': username,
-        'iat': datetime.datetime.utcnow(),
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=JWT_EXP_MINUTES),
+        'iat': datetime.now(timezone.utc),
+        'exp': datetime.now(timezone.utc) + datetime.timedelta(minutes=JWT_EXP_MINUTES),
     }
     token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
     if isinstance(token, bytes):

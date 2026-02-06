@@ -1,0 +1,30 @@
+from flask import Blueprint, request
+from psycopg2 import sql as pgsql
+from jwt_utils import jwt_required
+from uitils.db_query_utils import DBQueryUtils
+from controllers.query_controller import query_execution
+
+DB_TABLE = DBQueryUtils.DB_NAME  
+
+most_costly_repairs = Blueprint("most_costly_repairs", __name__, url_prefix="/kpi")
+
+@most_costly_repairs.route("/most_costly_repairs", methods=["GET"])
+# @jwt_required
+def get_most_costly_repairs():
+    """
+    Top 5 Most Costly Repair Types
+    """
+    limit = DBQueryUtils.DB_QUERY_LIMIT_FOR_COMPARATIVE_ANALYSIS  or request.args.get("limit", default=5, type=int)
+    sql = pgsql.SQL("""
+        SELECT
+            damage_code,
+            issue,
+           COUNT(DISTINCT fin) AS unique_vins,
+           SUM(CAST(REPLACE(total_cost, ',', '') AS DECIMAL)) AS total_repair_cost
+        FROM {}
+        GROUP BY 1, 2
+        ORDER BY total_repair_cost DESC
+        LIMIT %s
+    """).format(pgsql.Identifier(DB_TABLE))
+
+    return query_execution(DB_TABLE, limit, sql)

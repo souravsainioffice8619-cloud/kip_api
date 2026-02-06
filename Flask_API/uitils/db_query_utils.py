@@ -8,6 +8,7 @@ class DBQueryUtils:
     DB_USER='postgres'
     DB_PASSWORD='2527'
     DB_QUERY_LIMIT=1000
+    DB_QUERY_LIMIT_FOR_COMPARATIVE_ANALYSIS=5
     
 
     

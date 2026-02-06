@@ -6,6 +6,7 @@ from db_utils import add_log_entry, save_request_to_db
 import json
 import time
 from flask import g
+from waitress import serve
 
 
 # load .env
@@ -63,5 +64,19 @@ register_blueprints(app)
 
 if __name__ == "__main__":
     # run with: python first_api.py
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000,threaded=True)
+    #  # --- PRODUCTION CONFIGURATION ---
+    # host = "0.0.0.0"
+    # port = 5000
+    # threads = 6  # Number of concurrent threads to handle requests
+    
+    # print(f"Waitress is serving '{app.name}' on http://{host}:{port}")
+    
+    # # Use serve() instead of app.run()
+    # serve(
+    #     app, 
+    #     host=host, 
+    #     port=port, 
+    #     threads=threads
+    # )
 

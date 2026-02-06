@@ -7,7 +7,7 @@ from db_utils import get_connection
 db_bp = Blueprint("db", __name__, url_prefix="/db")
 
 @db_bp.route("/tables", methods=["GET"])
-# @jwt_required
+@jwt_required
 def list_tables():
     """Return a list of table names in the public schema."""
     conn = get_connection()
