@@ -7,6 +7,11 @@ import json
 import time
 from flask import g
 from waitress import serve
+import socket
+from controllers.utils import get_device_info
+
+
+# from waitress import serve
 
 
 # load .env
@@ -61,10 +66,32 @@ def log_request_info(response):
 # register controllers (blueprints)
 register_blueprints(app)
 
+def get_local_ip():
+    """Function to find the actual local network IP of this laptop"""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # We don't actually connect, but this tells us which IP we are using to talk to the world
+        s.connect(('8.8.8.8', 1))
+        ip = s.getsockname()[0]
+    except Exception:
+        ip = '127.0.0.1'
+    finally:
+        s.close()
+    return ip
 
 if __name__ == "__main__":
     # run with: python first_api.py
-    app.run(host="0.0.0.0", port=5000,threaded=True)
+    # app.run(host="0.0.0.0", port=5000,threaded=True)
+    port = 5000
+    local_ip = get_local_ip()
+    
+    print("=" * 50)
+    print("🚀 WAITRESS PROD SERVER STARTED")
+    print(f"🔗 Local:   http://localhost:{port}")
+    print(f"🌍 Network: http://{local_ip}:{port}")
+    print("=" * 50)
+    print("Press Ctrl+C to quit\n")
+    serve(app, host='0.0.0.0', port=5000, threads=6)
     #  # --- PRODUCTION CONFIGURATION ---
     # host = "0.0.0.0"
     # port = 5000

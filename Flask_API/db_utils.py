@@ -1,8 +1,11 @@
 import os
+from flask import json
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 import traceback
+from controllers.utils import get_device_info
+import json
 
 load_dotenv()
 
@@ -67,7 +70,9 @@ def save_error_log(error_obj, endpoint_name):
         conn.close()
 
         
-def save_request_to_db(data):
+def save_request_to_db(data):    
+
+    json_pretty = json.dumps(data, indent=4)
     sql = """
         INSERT INTO request_logs (method, path, ip_address, status_code, duration_ms)
         VALUES (%s, %s, %s, %s, %s)

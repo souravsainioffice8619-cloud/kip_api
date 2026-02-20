@@ -2,7 +2,7 @@ class DBQueryUtils:
     DEFAULT_LIMIT = 1000
     DB_HOST='localhost'
     DB_PORT='5432'
-    DB_NAME='warranty_claims'
+    DB_NAME='project_two'
     DB_SCHEMA='public'
     DB_TABLE='warranty_claims'
     DB_USER='postgres'

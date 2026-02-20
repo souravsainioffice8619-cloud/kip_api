@@ -20,7 +20,7 @@ def create_token(username: str) -> str:
     payload = {
         'sub': username,
         'iat': datetime.now(timezone.utc),
-        'exp': datetime.now(timezone.utc) + datetime.timedelta(minutes=JWT_EXP_MINUTES),
+        'exp': datetime.now(timezone.utc) + timedelta(minutes=JWT_EXP_MINUTES)
     }
     token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
     if isinstance(token, bytes):
