@@ -28,7 +28,7 @@ def get_region_wise_dealers():
     region = request.args.get("region", default=None, type=str)
     if region is None:
         return {"error": "Region parameter is required."}, 400
-    if region not in ['North', 'South', 'East', 'West']:
+    if region not in ['North', 'South', 'East', 'West', 'all']:
         return {"error": "Invalid region. Please choose from North, South, East, or West."}, 400
     region_wise_dealers_query = get_kpi_query("region_wise_dealers")
     match region:
@@ -40,7 +40,14 @@ def get_region_wise_dealers():
             region_wise_dealers_query = region_wise_dealers_query.replace("given_region_name", "'East'")
         case 'West':
             region_wise_dealers_query = region_wise_dealers_query.replace("given_region_name", "'West'")
-    limit = DBQueryUtils.DB_QUERY_LIMIT_FOR_COMPARATIVE_ANALYSIS or  request.args.get("limit", default=5, type=int)
+        case  'all' :
+            region_wise_dealers_query = region_wise_dealers_query.replace("WHERE region = given_region_name", " ")
+    if request.args.get("limit") in ('All', 'all', 'ALL'):
+        region_wise_dealers_query = region_wise_dealers_query.replace("LIMIT %s", " ")
+        limit = 5
+    else:
+        limit = request.args.get("limit", default=5, type=int) or DBQueryUtils.DB_QUERY_LIMIT_FOR_COMPARATIVE_ANALYSIS
+
     sql = pgsql.SQL(region_wise_dealers_query)
     return query_execution(region, limit, sql)
 
@@ -50,6 +57,6 @@ def get_models_wise_query():
     """
     Retrieves the models with the highest number of warranty claims.
     """
-    limit = DBQueryUtils.DB_QUERY_LIMIT_FOR_COMPARATIVE_ANALYSIS or  request.args.get("limit", default=25, type=int)
+    limit = request.args.get("limit", default=25, type=int) or DBQueryUtils.DB_QUERY_LIMIT_FOR_COMPARATIVE_ANALYSIS  
     sql = pgsql.SQL(get_kpi_query("models_wise_query")).format(pgsql.Identifier(DB_TABLE))
     return query_execution(DB_TABLE, limit, sql)

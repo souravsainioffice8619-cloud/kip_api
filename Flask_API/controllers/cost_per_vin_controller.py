@@ -19,17 +19,47 @@ cost_per_vin = Blueprint("cost_per_vin", __name__, url_prefix="/kpi")
 @cost_per_vin.route("/cost/vin/overall", methods=["GET"])
 # @jwt_required
 def city_overall():
-    """ Query weather data for a specific city with an optional limit.
-        http://localhost:5000/db_warranty_claims/cost/vin?limit=1000
+    """ Get overall KPI data with configurable period and region filters.
+        http://localhost:5000/kpi/cost/vin/overall?period=last_3_months&region=North&limit=1000
     """
-    # print("DB_TABLE:", DB_TABLE)
-    # print("DB_QUERY_LIMIT:", DB_QUERY_LIMIT)
-    limit = request.args.get("limit", type=int) or DB_QUERY_LIMIT 
-    sql = pgsql.SQL(get_kpi_query("overall_kpi")).format(pgsql.Identifier(DB_TABLE))              
-    # sql = pgsql.SQL("""SELECT * 
-    #                    FROM {} 
-    #                    LIMIT %s""").format(pgsql.Identifier(DB_TABLE))
-    result = query_execution(DB_TABLE,limit,sql)
+    # Get parameters from request
+    period = request.args.get("period", default="all_time").lower()
+    region = request.args.get("region", default="all").lower()
+    limit = request.args.get("limit", type=int) or DB_QUERY_LIMIT
+    
+    # Map period to query parameter names
+    period_mapping = {
+        "last_3_months": "last_3_months",
+        "last_6_months": "last_6_months",
+        "last_8_months": "last_8_months",
+        "this_year": "this_year",
+        "all_time": "all_time"
+    }
+    
+    if period not in period_mapping:
+        return {"error": "Invalid period. Please choose from last_3_months, last_6_months, last_8_months, this_year, or All Time."}, 400
+    
+    period_param = period_mapping[period]
+    
+    # Validate region
+    valid_regions = ['north', 'south', 'east', 'west', 'all']
+    if region not in valid_regions:
+        return {"error": "Invalid region. Please choose from North, South, East, West, or all."}, 400
+    
+    # Capitalize region for SQL (except 'all')
+    region_param = region.capitalize() if region != 'all' else 'all'
+    
+    # Get the overall_kpi_query
+    sql = get_kpi_query("overall_kpi")
+    
+    # Replace placeholders with actual values
+    sql = sql.replace("give_period_name", period_param)
+    sql = sql.replace("give_region_name", region_param)
+    
+    # Create SQL object
+    sql = pgsql.SQL(sql)
+    
+    result = query_execution(DB_TABLE, limit, sql)
     return result
 
 @cost_per_vin.route("/cost/vin", methods=["GET"])

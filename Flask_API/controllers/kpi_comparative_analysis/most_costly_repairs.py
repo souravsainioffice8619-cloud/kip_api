@@ -16,7 +16,19 @@ def get_most_costly_repairs():
     """
     Top 5 Most Costly Repair Types
     """
-    limit = DBQueryUtils.DB_QUERY_LIMIT_FOR_COMPARATIVE_ANALYSIS  or request.args.get("limit", default=5, type=int)
-    sql = pgsql.SQL(get_kpi_query("most_costly_repairs")).format(pgsql.Identifier(DB_TABLE)).format(pgsql.Identifier(DB_TABLE))
+    limit =  request.args.get("limit", default=5, type=int) or DBQueryUtils.DB_QUERY_LIMIT_FOR_COMPARATIVE_ANALYSIS  
+    sql = pgsql.SQL(get_kpi_query("most_costly_repairs")).format(pgsql.Identifier(DB_TABLE))
+
+    return query_execution(DB_TABLE, limit, sql)
+
+@most_costly_repairs.route("/least_costly_repairs", methods=["GET"])
+# @jwt_required
+def get_least_costly_repairs():
+    """
+    Top 5 Least Costly Repair Types
+    """
+    limit =  request.args.get("limit", default=5, type=int) or DBQueryUtils.DB_QUERY_LIMIT_FOR_COMPARATIVE_ANALYSIS  
+    sql_query = get_kpi_query("most_costly_repairs").replace("DESC", "ASC")
+    sql = pgsql.SQL(sql_query).format(pgsql.Identifier(DB_TABLE))
 
     return query_execution(DB_TABLE, limit, sql)

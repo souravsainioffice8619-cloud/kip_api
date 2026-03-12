@@ -25,72 +25,95 @@ monthly_kpi_query = """SELECT
                 LIMIT %s
 """
 
-overall_kpi_query = """SELECT
-                            unique_vehicles,
-                            total_claims,
-                            total_cost,
-                            total_hours,
-                            total_damages,
-
-                            ROUND(total_cost / unique_vehicles, 2) AS cost_per_vehicle,
-                            ROUND(total_cost / total_claims, 2) AS cost_per_visit,
-                            ROUND(total_hours / unique_vehicles, 2) AS hours_per_vehicle,
-                            ROUND(total_damages::numeric / unique_vehicles, 2) AS damages_per_vehicle,
-                            ROUND(total_cost / unique_vehicles, 2) AS damage_cost_per_vehicle
-
-                        FROM (
-                            SELECT
-                                COUNT(DISTINCT fin) AS unique_vehicles,
-                                COUNT(*) AS total_claims,
-                                SUM(total_cost) AS total_cost,
-                                SUM(op_time) AS total_hours,
-                                SUM(damage_count) AS total_damages
-                            FROM (
+overall_kpi_query = """
+                            WITH params AS (
                                 SELECT
-                                    fin,
-                                    ext_vega_claim_no,
-                                    SUM(total_cost) AS total_cost,
-                                    SUM(op_time) AS op_time,
-                                    COUNT(damage_code) AS damage_count
-                                FROM warranty_enriched
-                                GROUP BY fin, ext_vega_claim_no
-                            ) base
-                        ) kpi limit 1
+                                    'give_period_name'::text AS period,
+                                    'give_region_name'::text AS region_filter
+                            ),
+                            filtered_data AS (
+                                SELECT w.*
+                                FROM warranty_enriched w
+                                CROSS JOIN params p
+                                WHERE
+                                    -- Period Filter
+                                    (
+                                        p.period = 'all_time'
+                                        OR (p.period = 'last_3_months' AND w.repair_date >= DATE '2013-07-31' - INTERVAL '3 months')
+                                        OR (p.period = 'last_6_months' AND w.repair_date >= DATE '2013-07-31' - INTERVAL '6 months')
+                                        OR (p.period = 'last_8_months' AND w.repair_date >= DATE '2013-07-31' - INTERVAL '8 months')
+                                        OR (p.period = 'this_year'     AND EXTRACT(YEAR FROM w.repair_date) = 2013)
+                                    )
+                                    AND
+                                    -- Region Filter
+                                    (
+                                        p.region_filter = 'all'
+                                        OR LOWER(w.region) = LOWER(p.region_filter)
+                                    )
+                            )
+                            SELECT
+                                -- Base Metrics  (same names as old query)
+                                COUNT(DISTINCT fin)                AS unique_vehicles,
+                                COUNT(DISTINCT ext_vega_claim_no)  AS total_claims,
+                                SUM(total_cost)                    AS total_cost,
+                                SUM(op_time)                       AS total_hours,
+                                COUNT(damage_code)                 AS total_damages,
+
+                                -- KPIs
+                                ROUND(SUM(total_cost)              / NULLIF(COUNT(DISTINCT fin), 0), 2)              AS cost_per_vehicle,
+                                ROUND(SUM(total_cost)              / NULLIF(COUNT(DISTINCT ext_vega_claim_no), 0), 2) AS cost_per_visit,
+                                ROUND(SUM(op_time)                 / NULLIF(COUNT(DISTINCT fin), 0), 2)              AS hours_per_vehicle,
+                                ROUND(COUNT(damage_code)::numeric  / NULLIF(COUNT(DISTINCT fin), 0), 2)              AS damages_per_vehicle,
+                                ROUND(SUM(parts_cost + labor_cost) / NULLIF(COUNT(DISTINCT fin), 0), 2)              AS damage_cost_per_vehicle
+
+                            FROM filtered_data
 """
 weekly_kpi_query = """WITH weekly_data AS (
-                                    SELECT
-                                        FLOOR((repair_date - DATE '2012-12-01') / 7) + 1 AS week_number,
+                                                SELECT
+                                                    FLOOR((repair_date - DATE '2012-12-01') / 7) + 1 AS week_number,
 
-                                        COUNT(DISTINCT fin) AS unique_vehicles,
-                                        COUNT(DISTINCT ext_vega_claim_no) AS total_claims,
-                                        SUM(total_cost) AS total_cost,
-                                        SUM(op_time) AS total_hours,
-                                        COUNT(damage_code) AS total_damages
+                                                    -- Week start and end dates
+                                                    DATE '2012-12-01' + (FLOOR((repair_date - DATE '2012-12-01') / 7) * 7)::int AS week_start,
+                                                    DATE '2012-12-01' + (FLOOR((repair_date - DATE '2012-12-01') / 7) * 7 + 6)::int AS week_end,
 
-                                    FROM warranty_enriched
-                                    WHERE repair_date BETWEEN DATE '2012-12-01' AND DATE '2013-07-31'
-                                    GROUP BY week_number
-                                )
+                                                    COUNT(DISTINCT fin)               AS unique_vehicles,
+                                                    COUNT(DISTINCT ext_vega_claim_no) AS total_claims,
+                                                    SUM(total_cost)                   AS total_cost,
+                                                    SUM(op_time)                      AS total_hours,
+                                                    COUNT(damage_code)                AS total_damages
 
-                                SELECT
-                                    week_number,
+                                                FROM warranty_enriched
+                                                WHERE repair_date BETWEEN DATE '2012-12-01' AND DATE '2013-07-31'
+                                                GROUP BY week_number, week_start, week_end
+                                            )
 
-                                    unique_vehicles,
-                                    total_claims,
-                                    total_cost,
-                                    total_hours,
-                                    total_damages,
+                                            SELECT
+                                                week_number,
 
-                                    -- KPI Calculations
-                                    ROUND(total_cost / unique_vehicles, 2) AS cost_per_vehicle,
-                                    ROUND(total_cost / total_claims, 2) AS cost_per_visit,
-                                    ROUND(total_hours / unique_vehicles, 2) AS hours_per_vehicle,
-                                    ROUND(total_damages::numeric / unique_vehicles, 2) AS damages_per_vehicle,
-                                    ROUND(total_cost / unique_vehicles, 2) AS damage_cost_per_vehicle
+                                                -- Format: "1 - 7 Dec 2012"
+                                                TO_CHAR(week_start, 'DD')
+                                                || ' - '
+                                                || TO_CHAR(LEAST(week_end, DATE '2013-07-31'), 'DD Mon YYYY') AS week_label,
 
-                                FROM weekly_data
-                                ORDER BY week_number
-                                LIMIT %s"""
+                                                week_start,
+                                                week_end,
+
+                                                unique_vehicles,
+                                                total_claims,
+                                                total_cost,
+                                                total_hours,
+                                                total_damages,
+
+                                                -- KPI Calculations
+                                                ROUND(total_cost / NULLIF(unique_vehicles, 0), 2)            AS cost_per_vehicle,
+                                                ROUND(total_cost / NULLIF(total_claims, 0), 2)               AS cost_per_visit,
+                                                ROUND(total_hours / NULLIF(unique_vehicles, 0), 2)           AS hours_per_vehicle,
+                                                ROUND(total_damages::numeric / NULLIF(unique_vehicles, 0), 2) AS damages_per_vehicle,
+                                                ROUND(total_cost / NULLIF(unique_vehicles, 0), 2)            AS damage_cost_per_vehicle
+
+                                            FROM weekly_data
+                                            ORDER BY week_number
+                                            LIMIT %s"""
 worst_dealers_query = """WITH dealer_kpi AS (
                                                 SELECT
                                                     dealer_code,
@@ -132,6 +155,7 @@ region_wise_dealers_query = """WITH dealer_kpi AS (
                                                 dealer_name,
                                                 region,
                                                 COUNT(DISTINCT fin) AS vehicles,
+                                                COUNT(fin) AS Claims,
                                                 SUM(total_cost) AS total_cost,
                                                 SUM(total_cost) / COUNT(DISTINCT fin) AS cost_per_vehicle
                                             FROM warranty_enriched
@@ -146,6 +170,7 @@ region_wise_dealers_query = """WITH dealer_kpi AS (
                                         LIMIT %s"""
 models_wise_query = """     SELECT model_series,
                                                 COUNT(DISTINCT fin) AS vehicles,
+                                                COUNT(fin) AS Claims,
                                                 SUM(total_cost) AS total_cost,
                                                 SUM(total_cost) / COUNT(DISTINCT fin) AS cost_per_vehicle
                                             FROM warranty_enriched
@@ -154,16 +179,16 @@ models_wise_query = """     SELECT model_series,
                                         ORDER BY cost_per_vehicle ASC
                                         LIMIT %s"""
 high_cost_per_vin_query =  """SELECT *
-                FROM model_kpi
+                FROM issue_kpi
                 ORDER BY cost_per_vehicle DESC
                 LIMIT %s"""
 
 most_frequent_repairs = """SELECT *
-                                FROM repair_kpi
+                                FROM issue_kpi
                                 ORDER BY frequency DESC
                                 LIMIT %s"""
 least_frequent_repairs = """SELECT *
-                                FROM repair_kpi
+                                FROM issue_kpi
                                 ORDER BY frequency ASC
                                 LIMIT %s"""
 most_problematic_models  = """SELECT *
@@ -175,8 +200,27 @@ least_problematic_models  = """SELECT *
                 ORDER BY cost_per_vehicle ASC
                 LIMIT %s"""
 
+model_vs_issue_analysis ="""
+                        SELECT
+                                model_series,
+                                issue,
 
+                                COUNT(*) AS frequency,
+                                -- Number of times this issue occurred for this model
 
+                                SUM(total_cost) AS total_cost
+                                -- Total warranty cost caused by this issue for this model
+
+                                FROM warranty_enriched
+
+                                WHERE issue IS NOT NULL AND total_cost > 0
+
+                                GROUP BY model_series, issue
+
+                                ORDER BY total_cost DESC 
+
+                                Limit %s              
+"""
 kpi_queries = {
     "cost_per_damage": "SELECT * FROM warranty_enriched LIMIT %s",
     "overall_kpi": overall_kpi_query,
@@ -200,7 +244,8 @@ kpi_queries = {
     "lowest_warranty_issues_by_models": least_problematic_models,
     "most_costly_repairs": high_cost_per_vin_query,
     "most_frequent_repairs": most_frequent_repairs,
-    "worst_performance": worst_dealers_query
+    "worst_performance": worst_dealers_query,
+    "model_vs_issue_analysis":model_vs_issue_analysis
                             # Add more KPI queries as needed
 }
 
